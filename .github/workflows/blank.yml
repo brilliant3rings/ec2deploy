@@ -32,4 +32,4 @@ jobs:
 
       - name: Check Run Command Result
         run: |
-          bash -x ./.github/scripts/check_command_result.sh ${{ steps.exec.outputs.commandId }}
+          bash -x ./.github/check_command_result.sh ${{ steps.exec.outputs.commandId }}
