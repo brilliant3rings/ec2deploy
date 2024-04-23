@@ -1,0 +1,35 @@
+name: Deploy to Sandbox
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-1
+
+      - name: Execute SSM Run Command
+        id: exec
+        run: |
+          export RESPONSE=$(aws ssm send-command --document-name "AWS-RunShellScript" --document-version "1" --targets '[{"Key":"InstanceIds","Values":["i-06e30b2f56c1146b3 "]}]' --parameters '{"workingDirectory":[""],"executionTimeout":["3600"],"commands":["cd /home/ubuntu/20240423", "sudo -u ubunt git pull"]}' --timeout-seconds 600 --max-concurrency "50" --max-errors "0" --region ap-northeast-1)
+          export COMMAND_ID=$(echo $RESPONSE | jq .Command.CommandId)
+          echo "::set-output name=commandId::${COMMAND_ID}"
+
+      - name: Check Run Command Result
+        run: |
+          bash -x ./.github/scripts/check_command_result.sh ${{ steps.exec.outputs.commandId }}
